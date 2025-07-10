@@ -33,12 +33,10 @@ SELECT first_name
 FROM actor;
 
 -- o:
-
 SELECT first_name, last_name
 FROM actor;
 
 -- o:
-
 SELECT CONCAT(first_name, ' ', last_name) AS full_name 
 FROM actor;
 
@@ -78,7 +76,6 @@ FROM film_category
 WHERE category_id =1;
 
 -- Query final:
-
 SELECT c.name AS "film_category", COUNT(name)
 FROM film AS f
 INNER JOIN film_category AS f_cat
@@ -88,7 +85,6 @@ ON f_cat.category_id = c.category_id
 GROUP BY c.name;
 
 -- Limpio:
-
 SELECT c.name AS "film_category", COUNT(name)
 FROM film AS f
 INNER JOIN film_category AS f_cat
@@ -101,13 +97,11 @@ GROUP BY c.name;
 del cliente, su nombre y apellido junto con la cantidad de películas alquiladas.*/
 
 -- Prueba:
-
 SELECT customer_id
 FROM rental
 WHERE customer_id = '2'; -- Customer_id: 2 ha alquilado 27 películas
 
 -- Query final (limpia):
-
 SELECT customer_id, first_name, last_name,  COUNT(c.customer_id) AS 'rented_movies'
 FROM customer AS c
 INNER JOIN rental
@@ -120,131 +114,224 @@ GROUP BY customer_id;
 
 -- Había usado ALIAS pero al hacer uso de USING, no he visto necesidad de mantenerlo, más que en c.customer.
 
-/*-- 11. Encuentra la cantidad total de películas alquiladas por categoría y muestra el nombre de la categoría
-junto con el recuento de alquileres.*/
+/*-- 11. Encuentra la cantidad total de películas alquiladas por categoría y muestra el 
+nombre de la categoría junto con el recuento de alquileres.*/
+
+-- para ver los alquileres
+SELECT * 
+FROM rental LIMIT 10; 
+
+-- para ver el inventario alquilado
+
+SELECT r.rental_id, r.inventory_id, i.film_id
+FROM rental AS r
+JOIN inventory AS i 
+ON r.inventory_id = i.inventory_id
+LIMIT 10; 
+
+-- películas alquiladas por título
+ 
+SELECT r.rental_id, f.film_id, f.title AS 'film_name'
+FROM rental AS r
+JOIN inventory
+USING(inventory_id)
+JOIN film AS f 
+USING(film_id)
+LIMIT 10; 
+
+-- añadido categoría
+
+SELECT r.rental_id, f.title AS 'film_name', c.name AS 'category'
+FROM rental r
+INNER JOIN inventory AS i 
+ON r.inventory_id = i.inventory_id
+INNER JOIN film AS f 
+ON i.film_id = f.film_id
+INNER JOIN film_category AS f_cat 
+ON f.film_id = f_cat.film_id
+INNER JOIN category AS c 
+ON f_cat.category_id = c.category_id
+LIMIT 10;
+
+-- Query final:
+SELECT c.name AS 'category_name', COUNT(r.rental_id) AS total_rentals
+	FROM rental r
+INNER JOIN inventory AS i 
+	ON r.inventory_id = i.inventory_id
+INNER JOIN film AS f 
+	ON i.film_id = f.film_id
+INNER JOIN film_category AS f_cat 
+	ON f.film_id = f_cat.film_id
+INNER JOIN category AS c 
+	ON f_cat.category_id = c.category_id
+GROUP BY c.name
+	ORDER BY category_name ASC;
 
 
+/*-- 12. Encuentra el promedio de duración de las películas para cada clasificación de la 
+tabla film y muestra la clasificación junto con el promedio de duración.*/
 
-
-
-
-
-
-
-
-
-/*-- 12. Encuentra el promedio de duración de las películas para cada clasificación de la tabla film y
-muestra la clasificación junto con el promedio de duración.*/
-
-
-
-
-
-
-
-
-
-
+SELECT rating, AVG(length)
+FROM film
+GROUP BY rating;
 
 /*-- 13. Encuentra el nombre y apellido de los actores que aparecen en la película con
 title "Indian Love".*/
 
-
-
-
-
-
-
-
-
-
-
+SELECT a.first_name, a.last_name, f.title AS film_name
+FROM actor AS a 
+INNER JOIN film_actor
+USING (actor_id)
+INNER JOIN film AS f
+USING (film_id)
+WHERE f.title = 'Indian Love';
 
 /*-- 14. Muestra el título de todas las películas que contengan la palabra "dog" o "cat"
 en su descripción.*/
 
+-- Pruebas:
+SELECT title, description
+FROM film_text
+WHERE description LIKE '%dog%';
+-- 99 pelis que contienen la palabra perro
 
+--
+SELECT title, description
+FROM film_text
+WHERE description LIKE '%cat%';
+-- 70 pelis que contienen la palabra gato
+-- Con UNION ALL salen 169 pelis, por lo que solo hay 2 duplicados de pelis que contengan perro y gato.
 
+-- Query final: 
+SELECT title, description
+FROM film_text
+WHERE description LIKE '%dog%'
 
+UNION -- para quitar duplicados
 
+SELECT title, description
+FROM film_text
+WHERE description LIKE '%cat%'
 
-
-
-
-
+ORDER BY title ASC;
 
 -- 15. Hay algún actor o actriz que no aparezca en ninguna película en la tabla film_actor.
 
+SELECT actor_id, first_name, last_name
+FROM actor;
+
+SELECT actor_id, film_id
+FROM film_actor;
+
+SELECT film_id, title
+FROM film;
 
 
+SELECT a.actor_id, a.first_name, a.last_name
+FROM actor AS a
+LEFT JOIN film_actor AS fa 
+ON a.actor_id = fa.actor_id
+WHERE fa.film_id IS NOT NULL;
 
-
-
-
-
-
+-- VOLVER A ESTE
 
 
 -- 16. Encuentra el título de todas las películas que fueron lanzadas entre el año 2005 y 2010.
 
+SELECT title, release_year
+FROM film
+WHERE release_year BETWEEN 2005 AND 2010;
 
-
-
-
-
-
-
-
+-- o:
+SELECT title, release_year
+FROM film
+WHERE release_year >= 2005 AND release_year <= 2010;
 
 
 -- 17. Encuentra el título de todas las películas que son de la misma categoría que "Family".
 
-
-
-
-
-
-
-
-
+SELECT f.title AS film_name, c.name AS category_name
+FROM film AS f
+INNER JOIN film_category AS f_cat
+USING (film_id)
+INNER JOIN category AS c
+USING (category_id)
+WHERE name = 'Family';
 
 -- 18. Muestra el nombre y apellido de los actores que aparecen en más de 10 películas.
 
+ -- con GROUP BY y HAVING
+SELECT 
+    a.actor_id,
+    a.first_name,
+    a.last_name,
+    COUNT(f_act.film_id) AS films_total
+FROM actor AS a
+INNER JOIN film_actor AS f_act
+ON a.actor_id = f_act.actor_id
+GROUP BY a.actor_id, a.first_name, a.last_name
+HAVING COUNT(f_act.film_id) > 10
+ORDER BY films_total ASC;
 
-
-
-
-
-
-
-
-
+ -- con subconsulta
+ 
+SELECT a.first_name, a.last_name, films_total
+FROM actor AS a
+INNER JOIN (
+    SELECT actor_id, COUNT(film_id) AS films_total
+    FROM film_actor
+    GROUP BY actor_id
+    HAVING COUNT(film_id) > 10
+) AS actores 
+ON a.actor_id = actores.actor_id
+ORDER BY films_total ASC;
 
 /*-- 19. Encuentra el título de todas las películas que son "R" y tienen una duración mayor 
 a 2 horas en la tabla film.*/
 
-
-
-
-
-
-
-
-
-
+SELECT title, length, rating
+FROM film
+WHERE rating = 'R' AND length > 120
+ORDER BY length ASC;
 
 /*-- 20. Encuentra las categorías de películas que tienen un promedio de duración superior 
 a 120 minutos y muestra el nombre de la categoría junto con el promedio de duración.*/
 
+-- Pruebas:
+SELECT category_id, name
+FROM category
+ORDER BY name;
 
+--
+SELECT category_id, film_id
+FROM film_category;
 
+--
+SELECT film_id, title, length
+FROM film
+ORDER BY length ASC;
 
+--
+SELECT fc.category_id, f.length
+FROM film_category fc
+JOIN film f ON fc.film_id = f.film_id;
 
+-- promedio por categoría:
+SELECT fc.category_id, AVG(f.length) AS avg_length
+FROM film_category fc
+JOIN film f ON fc.film_id = f.film_id
+GROUP BY fc.category_id;
 
-
-
-
-
+-- Query final:
+SELECT c.name AS category_name, AVG(f.length) AS avg_length
+FROM category AS c
+INNER JOIN film_category AS f_cat 
+ON c.category_id = f_cat.category_id
+INNER JOIN film AS f 
+ON f_cat.film_id = f.film_id
+GROUP BY c.name
+HAVING AVG(f.length) > 120
+ORDER BY avg_length ASC;
 
 
 /*-- 21. Encuentra los actores que han actuado en al menos 5 películas y muestra el nombre
@@ -262,13 +349,6 @@ del actor junto con la cantidad de películas en las que han actuado.*/
 
 
 /*-- 22. Encuentra el título de todas las películas que fueron alquiladas por más de 5 días. 
-
-
-
-
-
-
-
 Utiliza una subconsulta para encontrar los rental_ids con una duración superior a 5 días y
 luego selecciona las películas correspondientes.*/
 
