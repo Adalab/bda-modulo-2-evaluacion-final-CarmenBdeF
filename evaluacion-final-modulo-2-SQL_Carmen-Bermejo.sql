@@ -63,13 +63,10 @@ WHERE rating NOT IN ('R', 'PG-13');
 /*-- 9. Encuentra la cantidad total de películas en cada clasificación de la tabla film y 
 muestra la clasificación junto con el recuento.*/
 
--- Queries de comprobación:
-
+-- Pruebas:
 SELECT *
 FROM category
 WHERE name ='Action';
-
--- Action: 64
 
 SELECT *
 FROM film_category
@@ -84,7 +81,7 @@ INNER JOIN category AS c
 ON f_cat.category_id = c.category_id
 GROUP BY c.name;
 
--- Limpio:
+-- Query final con USING:
 SELECT c.name AS "film_category", COUNT(name)
 FROM film AS f
 INNER JOIN film_category AS f_cat
@@ -101,7 +98,7 @@ SELECT customer_id
 FROM rental
 WHERE customer_id = '2'; -- Customer_id: 2 ha alquilado 27 películas
 
--- Query final (limpia):
+-- Query final con USING:
 SELECT customer_id, first_name, last_name,  COUNT(c.customer_id) AS 'rented_movies'
 FROM customer AS c
 INNER JOIN rental
@@ -112,11 +109,10 @@ INNER JOIN film
 USING (film_id)
 GROUP BY customer_id;
 
--- Había usado ALIAS pero al hacer uso de USING, no he visto necesidad de mantenerlo, más que en c.customer.
-
 /*-- 11. Encuentra la cantidad total de películas alquiladas por categoría y muestra el 
 nombre de la categoría junto con el recuento de alquileres.*/
 
+-- Pruebas:
 -- para ver los alquileres
 SELECT * 
 FROM rental LIMIT 10; 
@@ -184,7 +180,7 @@ INNER JOIN film_actor
 USING (actor_id)
 INNER JOIN film AS f
 USING (film_id)
-WHERE f.title = 'Indian Love';
+WHERE f.title = 'Indian Love'; -- he añadido WHERE para asegurarme
 
 /*-- 14. Muestra el título de todas las películas que contengan la palabra "dog" o "cat"
 en su descripción.*/
@@ -213,7 +209,7 @@ SELECT title, description
 FROM film_text
 WHERE description LIKE '%cat%'
 
-ORDER BY title ASC;
+ORDER BY title ASC; -- creo que puede causar problemas porque podría coger palabras que contengan esas letras.
 
 -- 15. Hay algún actor o actriz que no aparezca en ninguna película en la tabla film_actor.
 
@@ -226,14 +222,12 @@ FROM film_actor;
 SELECT film_id, title
 FROM film;
 
-
+-- Query final:
 SELECT a.actor_id, a.first_name, a.last_name
 FROM actor AS a
-LEFT JOIN film_actor AS fa 
-ON a.actor_id = fa.actor_id
-WHERE fa.film_id IS NOT NULL;
-
--- VOLVER A ESTE
+LEFT JOIN film_actor AS f_act 
+ON a.actor_id = f_act.actor_id
+WHERE f_act.actor_id IS NULL; -- no hay ningún actor/ actriz que no aparezca en ninguna película en la tabla film_actor.
 
 
 -- 16. Encuentra el título de todas las películas que fueron lanzadas entre el año 2005 y 2010.
@@ -259,8 +253,7 @@ USING (category_id)
 WHERE name = 'Family';
 
 -- 18. Muestra el nombre y apellido de los actores que aparecen en más de 10 películas.
-
- -- con GROUP BY y HAVING
+-- con GROUP BY y HAVING
 SELECT 
     a.actor_id,
     a.first_name,
@@ -312,15 +305,17 @@ FROM film
 ORDER BY length ASC;
 
 --
-SELECT fc.category_id, f.length
-FROM film_category fc
-JOIN film f ON fc.film_id = f.film_id;
+SELECT f_cat.category_id, f.length
+FROM film_category AS f_cat
+JOIN film AS f 
+ON f_cat.film_id = f.film_id;
 
 -- promedio por categoría:
-SELECT fc.category_id, AVG(f.length) AS avg_length
-FROM film_category fc
-JOIN film f ON fc.film_id = f.film_id
-GROUP BY fc.category_id;
+SELECT f_cat.category_id, AVG(f.length) AS avg_length
+FROM film_category AS f_cat
+JOIN film AS f 
+ON f_cat.film_id = f.film_id
+GROUP BY f_cat.category_id;
 
 -- Query final:
 SELECT c.name AS category_name, AVG(f.length) AS avg_length
@@ -337,45 +332,166 @@ ORDER BY avg_length ASC;
 /*-- 21. Encuentra los actores que han actuado en al menos 5 películas y muestra el nombre
 del actor junto con la cantidad de películas en las que han actuado.*/
 
+-- Pruebas: Actriz Penelope ha actuado en 19 películas.
+SELECT actor_id, first_name, last_name
+FROM actor
+LIMIT 5;
 
+SELECT *
+FROM film_actor
+WHERE actor_id = 1;  
 
+SELECT actor_id, COUNT(film_id) AS total_films
+FROM film_actor
+WHERE actor_id = 1
+GROUP BY actor_id;
 
-
-
-
-
-
-
-
+-- Query final:
+SELECT 
+    a.first_name, 
+    a.last_name, 
+    COUNT(f_act.film_id) AS total_films
+FROM actor AS a
+JOIN film_actor AS f_act ON a.actor_id = f_act.actor_id
+GROUP BY a.actor_id, a.first_name, a.last_name
+HAVING COUNT(f_act.film_id) >= 5 -- para filtrar solo los que han hecho al menos 5 pelis
+ORDER BY total_films ASC;
 
 /*-- 22. Encuentra el título de todas las películas que fueron alquiladas por más de 5 días. 
 Utiliza una subconsulta para encontrar los rental_ids con una duración superior a 5 días y
 luego selecciona las películas correspondientes.*/
 
+-- Pruebas: 
+SELECT *
+FROM film
 
+--
+SELECT title, rental_duration
+FROM film
 
+--
+SELECT rental_id, rental_date, return_date
+FROM rental
 
+--
+SELECT rental_id
+FROM rental
+WHERE DATEDIFF(return_date, rental_date) > 5; -- calcular los días de alquiler y devolución
 
+--
+SELECT *
+FROM film AS f
+INNER JOIN inventory AS i
+USING (film_id)
+INNER JOIN rental AS r
+USING (inventory_id)
+WHERE film_id = 1;
+
+--
+SELECT rental_id, DATEDIFF(return_date, rental_date) duration
+FROM rental
+WHERE rental_id = 11433;
+
+--
+SELECT rental_id, rental_date, return_date, DATEDIFF(return_date, rental_date) AS total_rental_days
+FROM rental
+WHERE DATEDIFF(return_date, rental_date) > 5;
+
+-- Query final:
+SELECT f.title, r.rental_id, DATEDIFF(return_date, rental_date) AS duration
+FROM film AS f
+JOIN inventory AS i 
+ON f.film_id = i.film_id
+JOIN rental AS r 
+ON i.inventory_id = r.inventory_id
+WHERE r.rental_id IN (
+    SELECT rental_id
+    FROM rental
+    WHERE DATEDIFF(return_date, rental_date) > 5);
 
 
 /*-- 23. Encuentra el nombre y apellido de los actores que no han actuado en ninguna película
 de la categoría "Horror". Utiliza una subconsulta para encontrar los actores que han actuado
  en películas de la categoría "Horror" y luego exclúyelos de la lista de actores.*/
  
+-- Prueba (subconsulta)
+SELECT DISTINCT f_act.actor_id, c.name
+FROM film_actor AS f_act
+JOIN film_category AS f_cat
+ON f_act.film_id = f_cat.film_id
+JOIN category AS c 
+ON f_cat.category_id = c.category_id
+WHERE c.name = 'Horror'; -- actores (id) que sí han actuado en películas de Horror.
+
+-- Query principal (se nos pide nombre y apellido):
+SELECT a.first_name, a.last_name
+FROM actor AS a
+WHERE a.actor_id NOT IN (...); -- no es un error, es donde debe ir la subconsulta
+
+-- Query final:
+SELECT a.first_name, a.last_name
+FROM actor AS a
+WHERE a.actor_id NOT IN (
+    SELECT DISTINCT f_act.actor_id
+    FROM film_actor AS f_act
+    INNER JOIN film_category AS f_cat 
+    ON f_act.film_id = f_cat.film_id
+    JOIN category AS c 
+    ON f_cat.category_id = c.category_id
+    WHERE c.name = 'Horror'
+)
+ORDER BY a.last_name, a.first_name;
  
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
+ -- ALTERNATIVA: Actores que han actuado en Horror (Incluidos)
+SELECT DISTINCT a.first_name, a.last_name, 'Included' AS category
+FROM actor AS a
+JOIN film_actor AS f_act 
+ON a.actor_id = f_act.actor_id
+JOIN film_category AS f_cat 
+ON f_act.film_id = f_cat.film_id
+JOIN category AS c ON 
+f_cat.category_id = c.category_id
+WHERE c.name = 'Horror'
+
+UNION
+
+-- Actores que NO han actuado en Horror (Excluidos)
+SELECT a.first_name, a.last_name, 'Excluded' AS category
+FROM actor AS a
+WHERE a.actor_id NOT IN (
+    SELECT f_act.actor_id
+    FROM film_actor AS f_act
+    JOIN film_category AS f_cat 
+    ON f_act.film_id = f_cat.film_id
+    JOIN category AS c 
+    ON f_cat.category_id = c.category_id
+    WHERE c.name = 'Horror'
+)
+ORDER BY category, last_name, first_name;
  
 /*-- 24. Encuentra el título de las películas que son comedias y tienen una duración mayor
 a 180 minutos en la tabla film.*/
+
+-- Pruebas:
+SELECT f_cat.category_id, c.name, COUNT(c.name) AS total_films -- 58 películas cat. comedia.
+FROM film_category AS f_cat
+INNER JOIN category AS c
+USING(category_id)
+GROUP BY category_id; 
+
+--
+SELECT title, length
+FROM film;
+
+-- Query final:
+SELECT f.title AS film_name, c.name AS category_name, f.length
+FROM film AS f
+JOIN film_category AS f_cat 
+ON f.film_id = f_cat.film_id
+JOIN category AS c 
+ON f_cat.category_id = c.category_id
+WHERE c.name = 'Comedy' AND f.length > 180
+ORDER BY f.length ASC;
+
+
+
